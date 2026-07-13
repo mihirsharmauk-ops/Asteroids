@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Asteroids</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #fff; }
@@ -262,7 +262,7 @@ canvas { display: block; margin: 0 auto; }
 </div>
 
 <script>
-let supabase = null;
+let supabaseClient = null;
 let currentUser = null;
 let currentProfile = null;
 
@@ -270,19 +270,19 @@ try {
   const SUPABASE_URL = 'https://tmjtxdprlouxjsyiofvm.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtanR4ZHBybG91eGpzeWlvZnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MzU1MTAsImV4cCI6MjA5OTUxMTUxMH0.qVIa3_6XEBmoFBEN1PlU6T7JXWpngBCS02bod1Zixek';
   if (window.supabase && window.supabase.createClient) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
 } catch (e) {
   console.warn('Supabase init failed:', e);
 }
 
-function supabaseReady() { return supabase !== null; }
+function supabaseReady() { return supabaseClient !== null; }
 
 // Auth
 async function initAuth() {
   if (!supabaseReady()) return;
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       currentUser = session.user;
       await loadProfile();
@@ -294,7 +294,7 @@ async function initAuth() {
 async function loadProfile() {
   if (!currentUser || !supabaseReady()) return;
   try {
-    const { data } = await supabase.from('profiles').select('username').eq('id', currentUser.id).single();
+    const { data } = await supabaseClient.from('profiles').select('username').eq('id', currentUser.id).single();
     if (data) currentProfile = data;
   } catch (e) { console.warn('Load profile failed:', e); }
 }
@@ -341,7 +341,7 @@ async function handleAuth() {
     if (!username) { errorEl.textContent = 'Enter a username'; return; }
     if (username.length < 2 || username.length > 20) { errorEl.textContent = 'Username must be 2-20 chars'; return; }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { username } }
     });
@@ -357,7 +357,7 @@ async function handleAuth() {
     showUserBar();
     syncProgressToCloud();
   } else {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) { errorEl.textContent = error.message; return; }
     currentUser = data.user;
     await loadProfile();
@@ -372,7 +372,7 @@ function playAsGuest() {
 }
 
 async function handleLogout() {
-  if (supabaseReady()) await supabase.auth.signOut();
+  if (supabaseReady()) await supabaseClient.auth.signOut();
   currentUser = null;
   currentProfile = null;
   document.getElementById('userBar').style.display = 'none';
@@ -392,7 +392,7 @@ async function syncProgressToCloud() {
   if (!currentUser || !supabaseReady()) return;
   try {
     for (const level in progress.times) {
-      await supabase.from('scores').upsert({
+      await supabaseClient.from('scores').upsert({
         user_id: currentUser.id,
         level: parseInt(level),
         time: progress.times[level]
@@ -404,7 +404,7 @@ async function syncProgressToCloud() {
 async function syncProgressFromCloud() {
   if (!currentUser || !supabaseReady()) return;
   try {
-    const { data } = await supabase.from('scores').select('level, time').eq('user_id', currentUser.id);
+    const { data } = await supabaseClient.from('scores').select('level, time').eq('user_id', currentUser.id);
     if (!data) return;
     for (const row of data) {
       if (!progress.times[row.level] || row.time < progress.times[row.level]) {
@@ -421,7 +421,7 @@ async function syncProgressFromCloud() {
 async function uploadScore(level, time) {
   if (!currentUser || !supabaseReady()) return;
   try {
-    await supabase.from('scores').upsert({
+    await supabaseClient.from('scores').upsert({
       user_id: currentUser.id,
       level, time
     }, { onConflict: 'user_id,level' });
@@ -469,7 +469,7 @@ async function loadLeaderboard(startLevel) {
   table.innerHTML = '';
 
   if (startLevel === 0) {
-    const { data } = await supabase.from('scores').select('level, time, profiles(username)').order('time').limit(100);
+    const { data } = await supabaseClient.from('scores').select('level, time, profiles(username)').order('time').limit(100);
     if (!data || data.length === 0) {
       table.innerHTML = '<div class="lb-empty">No scores yet</div>';
       return;
@@ -494,7 +494,7 @@ async function loadLeaderboard(startLevel) {
     }
   } else {
     const endLevel = Math.min(startLevel + 9, LEVELS);
-    const { data } = await supabase.from('scores').select('level, time, profiles(username)').gte('level', startLevel).lte('level', endLevel).order('time').limit(100);
+    const { data } = await supabaseClient.from('scores').select('level, time, profiles(username)').gte('level', startLevel).lte('level', endLevel).order('time').limit(100);
     if (!data || data.length === 0) {
       table.innerHTML = '<div class="lb-empty">No scores yet</div>';
       return;
