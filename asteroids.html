@@ -1623,7 +1623,7 @@ function handleDeath() {
       startLevel(currentLevel);
     }, 800);
   } else {
-    handleDeath();
+    setTimeout(() => showResult(false), 800);
   }
 }
 
