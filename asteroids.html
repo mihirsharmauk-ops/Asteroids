@@ -262,27 +262,41 @@ canvas { display: block; margin: 0 auto; }
 </div>
 
 <script>
-const SUPABASE_URL = 'https://tmjtxdprlouxjsyiofvm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_WSLSqBsQ-6wstyuBYhxKcQ_LizCPQEM';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+let supabase = null;
 let currentUser = null;
 let currentProfile = null;
 
+try {
+  const SUPABASE_URL = 'https://tmjtxdprlouxjsyiofvm.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_WSLSqBsQ-6wstyuBYhxKcQ_LizCPQEM';
+  if (window.supabase && window.supabase.createClient) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch (e) {
+  console.warn('Supabase init failed:', e);
+}
+
+function supabaseReady() { return supabase !== null; }
+
 // Auth
 async function initAuth() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await loadProfile();
-    showUserBar();
-  }
+  if (!supabaseReady()) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      await loadProfile();
+      showUserBar();
+    }
+  } catch (e) { console.warn('Auth init failed:', e); }
 }
 
 async function loadProfile() {
-  if (!currentUser) return;
-  const { data } = await supabase.from('profiles').select('username').eq('id', currentUser.id).single();
-  if (data) currentProfile = data;
+  if (!currentUser || !supabaseReady()) return;
+  try {
+    const { data } = await supabase.from('profiles').select('username').eq('id', currentUser.id).single();
+    if (data) currentProfile = data;
+  } catch (e) { console.warn('Load profile failed:', e); }
 }
 
 function showUserBar() {
@@ -313,6 +327,7 @@ function switchAuthTab(tab) {
 }
 
 async function handleAuth() {
+  if (!supabaseReady()) return;
   const activeTab = document.querySelector('.auth-tab.active').textContent.trim();
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
@@ -357,7 +372,7 @@ function playAsGuest() {
 }
 
 async function handleLogout() {
-  await supabase.auth.signOut();
+  if (supabaseReady()) await supabase.auth.signOut();
   currentUser = null;
   currentProfile = null;
   document.getElementById('userBar').style.display = 'none';
@@ -374,37 +389,43 @@ function showAuthModal() {
 
 // Cloud sync
 async function syncProgressToCloud() {
-  if (!currentUser) return;
-  for (const level in progress.times) {
-    await supabase.from('scores').upsert({
-      user_id: currentUser.id,
-      level: parseInt(level),
-      time: progress.times[level]
-    }, { onConflict: 'user_id,level' });
-  }
+  if (!currentUser || !supabaseReady()) return;
+  try {
+    for (const level in progress.times) {
+      await supabase.from('scores').upsert({
+        user_id: currentUser.id,
+        level: parseInt(level),
+        time: progress.times[level]
+      }, { onConflict: 'user_id,level' });
+    }
+  } catch (e) { console.warn('Sync to cloud failed:', e); }
 }
 
 async function syncProgressFromCloud() {
-  if (!currentUser) return;
-  const { data } = await supabase.from('scores').select('level, time').eq('user_id', currentUser.id);
-  if (!data) return;
-  for (const row of data) {
-    if (!progress.times[row.level] || row.time < progress.times[row.level]) {
-      progress.times[row.level] = row.time;
+  if (!currentUser || !supabaseReady()) return;
+  try {
+    const { data } = await supabase.from('scores').select('level, time').eq('user_id', currentUser.id);
+    if (!data) return;
+    for (const row of data) {
+      if (!progress.times[row.level] || row.time < progress.times[row.level]) {
+        progress.times[row.level] = row.time;
+      }
+      progress.completed[row.level] = true;
+      if (row.level < LEVELS) progress.unlocked[row.level + 1] = true;
     }
-    progress.completed[row.level] = true;
-    if (row.level < LEVELS) progress.unlocked[row.level + 1] = true;
-  }
-  saveProgress();
-  buildGrid();
+    saveProgress();
+    buildGrid();
+  } catch (e) { console.warn('Sync from cloud failed:', e); }
 }
 
 async function uploadScore(level, time) {
-  if (!currentUser) return;
-  await supabase.from('scores').upsert({
-    user_id: currentUser.id,
-    level, time
-  }, { onConflict: 'user_id,level' });
+  if (!currentUser || !supabaseReady()) return;
+  try {
+    await supabase.from('scores').upsert({
+      user_id: currentUser.id,
+      level, time
+    }, { onConflict: 'user_id,level' });
+  } catch (e) { console.warn('Upload score failed:', e); }
 }
 
 // Leaderboard
@@ -437,6 +458,7 @@ function buildLevelNav() {
 }
 
 async function loadLeaderboard(startLevel) {
+  if (!supabaseReady()) return;
   lbCurrentLevel = startLevel;
   const nav = document.getElementById('lbNav').children;
   for (const btn of nav) btn.classList.remove('active');
