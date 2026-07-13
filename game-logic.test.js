@@ -13,6 +13,12 @@ import {
   isBossLevel,
   getBossNumber,
   getBossHp,
+  formatLeaderboardEntry,
+  groupScoresByLevel,
+  pickTopN,
+  validateUsername,
+  validateEmail,
+  validatePassword,
   LEVELS
 } from './game-logic.js';
 
@@ -264,5 +270,143 @@ describe('getBossHp', () => {
 
   it('boss 10 has 115 HP', () => {
     expect(getBossHp(100)).toBe(115);
+  });
+});
+
+describe('formatLeaderboardEntry', () => {
+  it('formats a complete entry', () => {
+    const entry = formatLeaderboardEntry(1, 'Player1', 5.432);
+    expect(entry.rank).toBe(1);
+    expect(entry.username).toBe('Player1');
+    expect(entry.time).toBe(5.43);
+    expect(entry.display).toBe('Player1: 5.43s');
+  });
+
+  it('handles missing username', () => {
+    const entry = formatLeaderboardEntry(2, null, 3.0);
+    expect(entry.username).toBe('???');
+    expect(entry.display).toContain('???');
+  });
+
+  it('rounds time to 2 decimal places', () => {
+    const entry = formatLeaderboardEntry(1, 'A', 9.999);
+    expect(entry.time).toBe(10);
+    expect(entry.display).toBe('A: 10.00s');
+  });
+});
+
+describe('groupScoresByLevel', () => {
+  it('groups scores by level', () => {
+    const scores = [
+      { level: 1, time: 5.0 },
+      { level: 2, time: 3.0 },
+      { level: 1, time: 4.0 },
+    ];
+    const grouped = groupScoresByLevel(scores);
+    expect(Object.keys(grouped)).toHaveLength(2);
+    expect(grouped[1]).toHaveLength(2);
+    expect(grouped[2]).toHaveLength(1);
+  });
+
+  it('sorts by time ascending within each level', () => {
+    const scores = [
+      { level: 1, time: 8.0 },
+      { level: 1, time: 3.0 },
+      { level: 1, time: 5.0 },
+    ];
+    const grouped = groupScoresByLevel(scores);
+    expect(grouped[1][0].time).toBe(3.0);
+    expect(grouped[1][1].time).toBe(5.0);
+    expect(grouped[1][2].time).toBe(8.0);
+  });
+
+  it('returns empty object for empty array', () => {
+    expect(groupScoresByLevel([])).toEqual({});
+  });
+});
+
+describe('pickTopN', () => {
+  it('picks top N entries per level', () => {
+    const grouped = {
+      1: [{ time: 1 }, { time: 2 }, { time: 3 }, { time: 4 }],
+      2: [{ time: 5 }, { time: 6 }],
+    };
+    const result = pickTopN(grouped, 2);
+    expect(result[1]).toHaveLength(2);
+    expect(result[1][0].time).toBe(1);
+    expect(result[2]).toHaveLength(2);
+  });
+
+  it('does not exceed available entries', () => {
+    const grouped = { 1: [{ time: 1 }] };
+    const result = pickTopN(grouped, 10);
+    expect(result[1]).toHaveLength(1);
+  });
+});
+
+describe('validateUsername', () => {
+  it('accepts valid username', () => {
+    expect(validateUsername('Player1').valid).toBe(true);
+  });
+
+  it('rejects empty username', () => {
+    expect(validateUsername('').valid).toBe(false);
+  });
+
+  it('rejects single character', () => {
+    expect(validateUsername('A').valid).toBe(false);
+  });
+
+  it('rejects username over 20 chars', () => {
+    expect(validateUsername('A'.repeat(21)).valid).toBe(false);
+  });
+
+  it('accepts 20 char username', () => {
+    expect(validateUsername('A'.repeat(20)).valid).toBe(true);
+  });
+
+  it('rejects special characters', () => {
+    expect(validateUsername('Player 1').valid).toBe(false);
+    expect(validateUsername('play@er').valid).toBe(false);
+  });
+
+  it('accepts underscores', () => {
+    expect(validateUsername('player_1').valid).toBe(true);
+  });
+});
+
+describe('validateEmail', () => {
+  it('accepts valid email', () => {
+    expect(validateEmail('test@example.com').valid).toBe(true);
+  });
+
+  it('rejects empty email', () => {
+    expect(validateEmail('').valid).toBe(false);
+  });
+
+  it('rejects missing @', () => {
+    expect(validateEmail('testexample.com').valid).toBe(false);
+  });
+
+  it('rejects missing domain', () => {
+    expect(validateEmail('test@').valid).toBe(false);
+  });
+});
+
+describe('validatePassword', () => {
+  it('accepts valid password', () => {
+    expect(validatePassword('secret123').valid).toBe(true);
+  });
+
+  it('rejects empty password', () => {
+    expect(validatePassword('').valid).toBe(false);
+  });
+
+  it('rejects short password', () => {
+    expect(validatePassword('12345').valid).toBe(false);
+  });
+
+  it('accepts 6 char password', () => {
+    expect(validatePassword('123456').valid).toBe(true);
   });
 });

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Asteroids</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: #fff; }
@@ -98,6 +99,90 @@ canvas { display: block; margin: 0 auto; }
   font-size: 28px; color: #ff0; text-shadow: 0 0 10px #ff0; margin-bottom: 25px;
 }
 #resultOverlay .new-best { color: #0f0; font-size: 16px; margin-bottom: 10px; }
+
+/* Auth Modal */
+#authModal {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9); display: none; flex-direction: column;
+  align-items: center; justify-content: center; z-index: 30;
+}
+#authModal h2 { font-size: 32px; color: #0ff; margin-bottom: 20px; text-shadow: 0 0 20px #0ff; }
+#authModal .auth-form { display: flex; flex-direction: column; gap: 10px; width: 280px; }
+#authModal input {
+  padding: 10px 14px; font-size: 14px; font-family: 'Courier New', monospace;
+  background: #111; border: 1px solid #333; color: #fff; border-radius: 4px; outline: none;
+}
+#authModal input:focus { border-color: #0ff; }
+#authModal .auth-btn {
+  padding: 10px; font-size: 14px; font-family: 'Courier New', monospace;
+  background: transparent; border: 2px solid #0ff; color: #0ff; cursor: pointer;
+  border-radius: 4px; transition: all 0.15s;
+}
+#authModal .auth-btn:hover { background: #0ff; color: #000; }
+#authModal .auth-btn.secondary { border-color: #666; color: #666; }
+#authModal .auth-btn.secondary:hover { background: #666; color: #000; }
+#authModal .auth-btn.danger { border-color: #f44; color: #f44; }
+#authModal .auth-btn.danger:hover { background: #f44; color: #000; }
+#authModal .auth-toggle { color: #888; font-size: 13px; margin-top: 10px; cursor: pointer; }
+#authModal .auth-toggle:hover { color: #0ff; }
+#authModal .auth-error { color: #f44; font-size: 12px; min-height: 16px; }
+#authModal .auth-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+#authModal .auth-tab {
+  padding: 8px 20px; font-size: 14px; font-family: 'Courier New', monospace;
+  background: transparent; border: 1px solid #333; color: #666; cursor: pointer;
+  border-radius: 4px; transition: all 0.15s;
+}
+#authModal .auth-tab.active { border-color: #0ff; color: #0ff; }
+
+/* User Bar */
+#userBar {
+  position: absolute; top: 10px; right: 10px; z-index: 12;
+  display: flex; align-items: center; gap: 10px;
+}
+#userBar .username { color: #0ff; font-size: 14px; }
+#userBar button {
+  padding: 4px 10px; font-size: 11px; font-family: 'Courier New', monospace;
+  background: transparent; border: 1px solid #444; color: #888; cursor: pointer;
+  border-radius: 3px; transition: all 0.15s;
+}
+#userBar button:hover { border-color: #0ff; color: #0ff; }
+
+/* Leaderboard */
+#leaderboardOverlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.92); display: none; flex-direction: column;
+  align-items: center; justify-content: flex-start; z-index: 25;
+  padding-top: 40px; overflow-y: auto;
+}
+#leaderboardOverlay h2 { font-size: 28px; color: #ff0; text-shadow: 0 0 20px #ff0; margin-bottom: 5px; }
+#leaderboardOverlay .lb-level { color: #888; font-size: 14px; margin-bottom: 15px; }
+#leaderboardOverlay .lb-table {
+  width: 400px; max-width: 90vw;
+}
+#leaderboardOverlay .lb-row {
+  display: flex; justify-content: space-between; padding: 6px 12px;
+  border-bottom: 1px solid #222; font-size: 14px;
+}
+#leaderboardOverlay .lb-row.header { color: #666; font-size: 12px; border-bottom: 1px solid #444; }
+#leaderboardOverlay .lb-row .rank { width: 40px; color: #888; }
+#leaderboardOverlay .lb-row .name { flex: 1; color: #0ff; }
+#leaderboardOverlay .lb-row .time { width: 80px; text-align: right; color: #ff0; }
+#leaderboardOverlay .lb-row.me .name { color: #0f0; }
+#leaderboardOverlay .lb-nav { display: flex; gap: 10px; margin-bottom: 15px; }
+#leaderboardOverlay .lb-nav button {
+  padding: 6px 14px; font-size: 13px; font-family: 'Courier New', monospace;
+  background: transparent; border: 1px solid #444; color: #888; cursor: pointer;
+  border-radius: 3px; transition: all 0.15s;
+}
+#leaderboardOverlay .lb-nav button:hover { border-color: #ff0; color: #ff0; }
+#leaderboardOverlay .lb-nav button.active { border-color: #ff0; color: #ff0; }
+#leaderboardOverlay .lb-empty { color: #555; font-size: 13px; margin-top: 20px; }
+#leaderboardOverlay .lb-close {
+  margin-top: 20px; padding: 10px 30px; font-size: 14px; font-family: 'Courier New', monospace;
+  background: transparent; border: 2px solid #ff0; color: #ff0; cursor: pointer;
+  border-radius: 4px; transition: all 0.15s;
+}
+#leaderboardOverlay .lb-close:hover { background: #ff0; color: #000; }
 </style>
 </head>
 <body>
@@ -113,6 +198,8 @@ canvas { display: block; margin: 0 auto; }
     <span>Space</span> to shoot &bull;
     <span>P</span> to pause &bull;
     <span>R</span> to retry
+    <br><br>
+    <span style="cursor:pointer;color:#0ff;" onclick="showAuthModal()">Sign Up / Log In</span> for cloud saves &amp; leaderboards
   </div>
 </div>
 
@@ -144,7 +231,277 @@ canvas { display: block; margin: 0 auto; }
   <button id="resultBtn2" onclick="handleResult(2)"></button>
 </div>
 
+<div id="authModal">
+  <h2 id="authTitle">Sign Up</h2>
+  <div class="auth-tabs">
+    <button class="auth-tab active" onclick="switchAuthTab('signup')">Sign Up</button>
+    <button class="auth-tab" onclick="switchAuthTab('login')">Log In</button>
+  </div>
+  <div class="auth-form">
+    <input type="text" id="authUsername" placeholder="Username" autocomplete="username">
+    <input type="email" id="authEmail" placeholder="Email" autocomplete="email">
+    <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn" id="authSubmit" onclick="handleAuth()">Sign Up</button>
+    <button class="auth-btn secondary" onclick="playAsGuest()">Play as Guest</button>
+  </div>
+</div>
+
+<div id="userBar" style="display:none;">
+  <span class="username" id="userDisplay"></span>
+  <button onclick="showLeaderboard()">Leaderboard</button>
+  <button onclick="handleLogout()">Logout</button>
+</div>
+
+<div id="leaderboardOverlay">
+  <h2>Leaderboard</h2>
+  <div class="lb-level" id="lbLevel">All Levels</div>
+  <div class="lb-nav" id="lbNav"></div>
+  <div class="lb-table" id="lbTable"></div>
+  <button class="lb-close" onclick="closeLeaderboard()">Close</button>
+</div>
+
 <script>
+const SUPABASE_URL = 'https://tmjtxdprlouxjsyiofvm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WSLSqBsQ-6wstyuBYhxKcQ_LizCPQEM';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+// Auth
+async function initAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadProfile();
+    showUserBar();
+  }
+}
+
+async function loadProfile() {
+  if (!currentUser) return;
+  const { data } = await supabase.from('profiles').select('username').eq('id', currentUser.id).single();
+  if (data) currentProfile = data;
+}
+
+function showUserBar() {
+  const bar = document.getElementById('userBar');
+  const display = document.getElementById('userDisplay');
+  bar.style.display = 'flex';
+  display.textContent = currentProfile ? currentProfile.username : 'Guest';
+}
+
+function switchAuthTab(tab) {
+  const tabs = document.querySelectorAll('.auth-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  const title = document.getElementById('authTitle');
+  const submit = document.getElementById('authSubmit');
+  const usernameInput = document.getElementById('authUsername');
+  if (tab === 'signup') {
+    tabs[0].classList.add('active');
+    title.textContent = 'Sign Up';
+    submit.textContent = 'Sign Up';
+    usernameInput.style.display = 'block';
+  } else {
+    tabs[1].classList.add('active');
+    title.textContent = 'Log In';
+    submit.textContent = 'Log In';
+    usernameInput.style.display = 'none';
+  }
+  document.getElementById('authError').textContent = '';
+}
+
+async function handleAuth() {
+  const activeTab = document.querySelector('.auth-tab.active').textContent.trim();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errorEl = document.getElementById('authError');
+  errorEl.textContent = '';
+
+  if (!email || !password) { errorEl.textContent = 'Fill in all fields'; return; }
+
+  if (activeTab === 'Sign Up') {
+    const username = document.getElementById('authUsername').value.trim();
+    if (!username) { errorEl.textContent = 'Enter a username'; return; }
+    if (username.length < 2 || username.length > 20) { errorEl.textContent = 'Username must be 2-20 chars'; return; }
+
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { username } }
+    });
+    if (error) { errorEl.textContent = error.message; return; }
+    if (data.user && !data.session) {
+      errorEl.textContent = 'Check your email to confirm';
+      errorEl.style.color = '#0f0';
+      return;
+    }
+    currentUser = data.user;
+    await loadProfile();
+    document.getElementById('authModal').style.display = 'none';
+    showUserBar();
+    syncProgressToCloud();
+  } else {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { errorEl.textContent = error.message; return; }
+    currentUser = data.user;
+    await loadProfile();
+    document.getElementById('authModal').style.display = 'none';
+    showUserBar();
+    syncProgressFromCloud();
+  }
+}
+
+function playAsGuest() {
+  document.getElementById('authModal').style.display = 'none';
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  currentProfile = null;
+  document.getElementById('userBar').style.display = 'none';
+}
+
+function showAuthModal() {
+  document.getElementById('authModal').style.display = 'flex';
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authUsername').value = '';
+  switchAuthTab('signup');
+}
+
+// Cloud sync
+async function syncProgressToCloud() {
+  if (!currentUser) return;
+  for (const level in progress.times) {
+    await supabase.from('scores').upsert({
+      user_id: currentUser.id,
+      level: parseInt(level),
+      time: progress.times[level]
+    }, { onConflict: 'user_id,level' });
+  }
+}
+
+async function syncProgressFromCloud() {
+  if (!currentUser) return;
+  const { data } = await supabase.from('scores').select('level, time').eq('user_id', currentUser.id);
+  if (!data) return;
+  for (const row of data) {
+    if (!progress.times[row.level] || row.time < progress.times[row.level]) {
+      progress.times[row.level] = row.time;
+    }
+    progress.completed[row.level] = true;
+    if (row.level < LEVELS) progress.unlocked[row.level + 1] = true;
+  }
+  saveProgress();
+  buildGrid();
+}
+
+async function uploadScore(level, time) {
+  if (!currentUser) return;
+  await supabase.from('scores').upsert({
+    user_id: currentUser.id,
+    level, time
+  }, { onConflict: 'user_id,level' });
+}
+
+// Leaderboard
+let lbCurrentLevel = 0;
+
+async function showLeaderboard() {
+  document.getElementById('leaderboardOverlay').style.display = 'flex';
+  buildLevelNav();
+  await loadLeaderboard(0);
+}
+
+function closeLeaderboard() {
+  document.getElementById('leaderboardOverlay').style.display = 'none';
+}
+
+function buildLevelNav() {
+  const nav = document.getElementById('lbNav');
+  nav.innerHTML = '';
+  const btnAll = document.createElement('button');
+  btnAll.textContent = 'All';
+  btnAll.className = 'active';
+  btnAll.onclick = () => loadLeaderboard(0);
+  nav.appendChild(btnAll);
+  for (let i = 1; i <= LEVELS; i += 10) {
+    const btn = document.createElement('button');
+    btn.textContent = i + '-' + Math.min(i + 9, LEVELS);
+    btn.onclick = () => loadLeaderboard(i);
+    nav.appendChild(btn);
+  }
+}
+
+async function loadLeaderboard(startLevel) {
+  lbCurrentLevel = startLevel;
+  const nav = document.getElementById('lbNav').children;
+  for (const btn of nav) btn.classList.remove('active');
+  const label = startLevel === 0 ? 'All Levels' : 'Levels ' + startLevel + '-' + Math.min(startLevel + 9, LEVELS);
+  document.getElementById('lbLevel').textContent = label;
+
+  const table = document.getElementById('lbTable');
+  table.innerHTML = '';
+
+  if (startLevel === 0) {
+    const { data } = await supabase.from('scores').select('level, time, profiles(username)').order('time').limit(100);
+    if (!data || data.length === 0) {
+      table.innerHTML = '<div class="lb-empty">No scores yet</div>';
+      return;
+    }
+    const grouped = {};
+    for (const row of data) {
+      if (!grouped[row.level]) grouped[row.level] = [];
+      if (grouped[row.level].length < 3) grouped[row.level].push(row);
+    }
+    const header = document.createElement('div');
+    header.className = 'lb-row header';
+    header.innerHTML = '<span class="rank">#</span><span class="name">Player</span><span class="time">Time</span>';
+    table.appendChild(header);
+    for (const level of Object.keys(grouped).sort((a,b) => a - b).slice(0, 10)) {
+      for (let i = 0; i < grouped[level].length; i++) {
+        const row = grouped[level][i];
+        const el = document.createElement('div');
+        el.className = 'lb-row' + (currentUser && row.profiles?.username === currentProfile?.username ? ' me' : '');
+        el.innerHTML = '<span class="rank">L' + row.level + '</span><span class="name">' + (row.profiles?.username || '???') + '</span><span class="time">' + row.time.toFixed(2) + 's</span>';
+        table.appendChild(el);
+      }
+    }
+  } else {
+    const endLevel = Math.min(startLevel + 9, LEVELS);
+    const { data } = await supabase.from('scores').select('level, time, profiles(username)').gte('level', startLevel).lte('level', endLevel).order('time').limit(100);
+    if (!data || data.length === 0) {
+      table.innerHTML = '<div class="lb-empty">No scores yet</div>';
+      return;
+    }
+    const grouped = {};
+    for (const row of data) {
+      if (!grouped[row.level]) grouped[row.level] = [];
+      grouped[row.level].push(row);
+    }
+    for (const level of Object.keys(grouped).sort((a,b) => a - b)) {
+      const lvlHeader = document.createElement('div');
+      lvlHeader.className = 'lb-row header';
+      lvlHeader.innerHTML = '<span class="rank" style="color:#0ff">Level ' + level + '</span><span></span><span></span>';
+      table.appendChild(lvlHeader);
+      const entries = grouped[level].slice(0, 10);
+      for (let i = 0; i < entries.length; i++) {
+        const row = entries[i];
+        const el = document.createElement('div');
+        el.className = 'lb-row' + (currentUser && row.profiles?.username === currentProfile?.username ? ' me' : '');
+        el.innerHTML = '<span class="rank">' + (i + 1) + '</span><span class="name">' + (row.profiles?.username || '???') + '</span><span class="time">' + row.time.toFixed(2) + 's</span>';
+        table.appendChild(el);
+      }
+    }
+  }
+}
+
+// Init auth on load
+initAuth();
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const LEVELS = 100;
@@ -1190,6 +1547,7 @@ function showResult(won) {
       progress.unlocked[currentLevel + 1] = true;
     }
     saveProgress();
+    uploadScore(currentLevel, time);
 
     bestEl.textContent = isNewBest ? 'New Best Time!' : 'Best: ' + progress.times[currentLevel].toFixed(2) + 's';
     bestEl.style.color = isNewBest ? '#0f0' : '#888';

@@ -97,3 +97,53 @@ export function getBossHp(level) {
   const num = getBossNumber(level);
   return 15 + num * 10;
 }
+
+export function formatLeaderboardEntry(rank, username, time) {
+  return {
+    rank,
+    username: username || '???',
+    time: Math.round(time * 100) / 100,
+    display: (username || '???') + ': ' + (Math.round(time * 100) / 100).toFixed(2) + 's'
+  };
+}
+
+export function groupScoresByLevel(scores) {
+  const grouped = {};
+  for (const row of scores) {
+    if (!grouped[row.level]) grouped[row.level] = [];
+    grouped[row.level].push(row);
+  }
+  for (const level in grouped) {
+    grouped[level].sort((a, b) => a.time - b.time);
+  }
+  return grouped;
+}
+
+export function pickTopN(grouped, n) {
+  const result = {};
+  for (const level in grouped) {
+    result[level] = grouped[level].slice(0, n);
+  }
+  return result;
+}
+
+export function validateUsername(username) {
+  if (!username || typeof username !== 'string') return { valid: false, error: 'Username required' };
+  const trimmed = username.trim();
+  if (trimmed.length < 2) return { valid: false, error: 'Username must be at least 2 characters' };
+  if (trimmed.length > 20) return { valid: false, error: 'Username must be at most 20 characters' };
+  if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) return { valid: false, error: 'Username can only contain letters, numbers, and underscores' };
+  return { valid: true, error: null };
+}
+
+export function validateEmail(email) {
+  if (!email || typeof email !== 'string') return { valid: false, error: 'Email required' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return { valid: false, error: 'Invalid email format' };
+  return { valid: true, error: null };
+}
+
+export function validatePassword(password) {
+  if (!password || typeof password !== 'string') return { valid: false, error: 'Password required' };
+  if (password.length < 6) return { valid: false, error: 'Password must be at least 6 characters' };
+  return { valid: true, error: null };
+}
